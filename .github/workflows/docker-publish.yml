@@ -1,0 +1,88 @@
+name: Docker Publish
+
+on:
+  workflow_dispatch: ## on button click
+  push:
+    paths:
+      - Dockerfile
+      - entrypoint.sh
+      - '.github/workflows/docker*'
+    branches:
+      - main
+    tags:
+      - v[0-9]*
+
+env:
+  CR_REPO: sir5kong/kafka
+  KAFKA_VERSION: "3.5.0"
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      -
+        name: Checkout
+        uses: actions/checkout@v3
+      - 
+        name: Set outputs
+        id: vars
+        env:
+          DOCKERHUB_TOKEN: "${{ secrets.DOCKERHUB_TOKEN }}"
+        run: |
+          sha_short=$(git rev-parse --short HEAD)
+          echo "sha_short=$sha_short" >> $GITHUB_OUTPUT
+          echo "[env] GITHUB_REF_NAME: $GITHUB_REF_NAME"
+          if echo "$GITHUB_REF_NAME" | grep -E 'v[0-9.]+(-.*)?'; then
+            kafka_version=$(echo "$GITHUB_REF_NAME" | cut -d "-" -f1 | sed 's/^v//')
+            release_notes_url="https://archive.apache.org/dist/kafka/${kafka_version}/RELEASE_NOTES.html"
+            curl -sI "$release_notes_url" | grep '200 OK'
+            if [[ $? == "0" ]]; then
+              echo "is_release=true" >> $GITHUB_OUTPUT
+              echo "kafka_version=${kafka_version}" >> $GITHUB_OUTPUT
+              echo "kafka_version_short=$(echo $kafka_version | sed -E 's/.[0-9]+$//')" >> $GITHUB_OUTPUT
+              sha_tag="v${kafka_version}-${sha_short}"
+              echo "sha_tag=$sha_tag" >> $GITHUB_OUTPUT
+              if [[ "$kafka_version" == "$KAFKA_VERSION" ]]; then
+                echo "latest_or_sha=latest" >> $GITHUB_OUTPUT
+              else
+                echo "latest_or_sha=$sha_tag" >> $GITHUB_OUTPUT
+              fi
+            fi
+          fi
+          if echo "$DOCKERHUB_TOKEN" | grep -Eo '^[a-zA-Z]' > /dev/null ; then
+            echo "dockerhub_token_ok=true" >> $GITHUB_OUTPUT
+          else
+            exit "500"
+          fi
+      -
+        name: Login to Docker Hub
+        uses: docker/login-action@v2
+        if: steps.vars.outputs.dockerhub_token_ok == 'true'
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      -
+        name: Docker build testing
+        uses: docker/build-push-action@v4
+        if: github.ref_name == 'main'
+        with:
+          context: .
+          push: false
+          tags: |
+            ${{ env.CR_REPO }}:${{ github.ref_name }}-${{ steps.vars.outputs.sha_short }}
+      -
+        name: Build and push
+        uses: docker/build-push-action@v4
+        if: steps.vars.outputs.is_release == 'true'
+        # env:
+        #   KAFKA_VERSION: '${{ steps.vars.outputs.kafka_version }}'
+        with:
+          context: .
+          push: true
+          build-args: |
+            kafka_version=${{ steps.vars.outputs.kafka_version }}
+          tags: |
+            ${{ env.CR_REPO }}:${{ steps.vars.outputs.sha_tag }}
+            ${{ env.CR_REPO }}:${{ steps.vars.outputs.latest_or_sha }}
+            ${{ env.CR_REPO }}:v${{ steps.vars.outputs.kafka_version_short }}
+            ${{ env.CR_REPO }}:v${{ steps.vars.outputs.kafka_version }}
