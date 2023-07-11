@@ -44,6 +44,13 @@ jobs:
         with:
           source: ./
           destination: ./_site
+      - 
+        name: Add chart index.yaml
+        shell: bash
+        run: |
+          pwd ; ls _site
+          git show remotes/origin/gh-pages:index.yaml > _site/index.yaml
+          ls _site
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
 
