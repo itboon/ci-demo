@@ -37,6 +37,12 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
+      - 
+        name: Add chart index.yaml
+        shell: bash
+        run: |
+          git show remotes/origin/gh-pages:index.yaml > index.yaml
+          pwd; ls -alh
       - name: Setup Pages
         uses: actions/configure-pages@v3
       - name: Build with Jekyll
@@ -44,15 +50,6 @@ jobs:
         with:
           source: ./
           destination: ./_site
-      - 
-        name: Add chart index.yaml
-        shell: bash
-        run: |
-          pwd ; ls _site
-          ls /github/workspace/_site/
-          git show remotes/origin/gh-pages:index.yaml > /github/workspace/_site/index.yaml
-          ls _site
-          ls /github/workspace/_site/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
 
