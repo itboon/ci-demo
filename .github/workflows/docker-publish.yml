@@ -2,15 +2,15 @@ name: Docker Publish
 
 on:
   workflow_dispatch: ## on button click
-  push:
-    paths:
-      - Dockerfile
-      - entrypoint.sh
-      - '.github/workflows/docker*'
-    branches:
-      - main
-    tags:
-      - v[0-9]*
+  #push:
+  #  paths:
+  #    - Dockerfile
+  #    - entrypoint.sh
+  #    - '.github/workflows/docker*'
+  #  branches:
+  #    - main
+  #  tags:
+  #    - v[0-9]*
 
 env:
   CR_REPO: sir5kong/kafka
