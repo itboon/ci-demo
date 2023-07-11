@@ -49,8 +49,10 @@ jobs:
         shell: bash
         run: |
           pwd ; ls _site
-          git show remotes/origin/gh-pages:index.yaml > _site/index.yaml
+          ls /github/workspace/_site/
+          git show remotes/origin/gh-pages:index.yaml > /github/workspace/_site/index.yaml
           ls _site
+          ls /github/workspace/_site/
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v1
 
